@@ -1,0 +1,7 @@
+find 23 / 5: 4 -1
+sign: -1 0 1
+grades: 4 3 2 1 0
+collatz(27) = 111
+primes below 1000 = 168
+empty range ran 0 times
+range evaluated once: 4 iterations, n = 8

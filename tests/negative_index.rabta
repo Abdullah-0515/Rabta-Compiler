@@ -1,0 +1,8 @@
+// EXPECT: runtime error: index -1 is out of bounds for thali 'a' of size 3
+// EXPECT_EXIT: 2
+kaam main() shuru
+    thali a[3] = [1, 2, 3]
+    rakho i = 0 - 1
+    dikhao(a[i])
+    waapis 0
+khatam

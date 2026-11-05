@@ -1,0 +1,87 @@
+// control.rabta - basic blocks: waapis from inside loops and branches,
+// warna agar chains, nested loops, empty ranges, range evaluated once.
+
+kaam find(thali a, n, x) shuru
+    ghoom [i : 0 -> n] chal
+        agar a[i] == x shuru
+            waapis i
+        khatam
+    khatam
+    waapis -1
+khatam
+
+kaam sign(x) shuru
+    agar x < 0 shuru
+        waapis -1
+    khatam warna shuru
+        agar x == 0 shuru
+            waapis 0
+        khatam
+        waapis 1
+    khatam
+khatam
+
+kaam grade(score) shuru
+    agar score >= 90 shuru
+        waapis 4
+    khatam warna agar score >= 80 shuru
+        waapis 3
+    khatam warna agar score >= 70 shuru
+        waapis 2
+    khatam warna agar score >= 60 shuru
+        waapis 1
+    khatam
+    waapis 0
+khatam
+
+kaam collatz(n) shuru
+    rakho steps = 0
+    jab_tak n != 1 chal
+        agar n % 2 == 0 shuru
+            n = n / 2
+        khatam warna shuru
+            n = 3 * n + 1
+        khatam
+        steps = steps + 1
+    khatam
+    waapis steps
+khatam
+
+kaam count_primes(limit) shuru
+    rakho count = 0
+    ghoom [n : 2 -> limit] chal
+        rakho prime = 1
+        rakho d = 2
+        jab_tak d * d <= n && prime chal
+            agar n % d == 0 shuru
+                prime = 0
+            khatam
+            d = d + 1
+        khatam
+        count = count + prime
+    khatam
+    waapis count
+khatam
+
+kaam main() shuru
+    thali v[6] = [4, 8, 15, 16, 23, 42]
+    dikhao("find 23 / 5:", bulao find(v, 6, 23), bulao find(v, 6, 5))
+    dikhao("sign:", bulao sign(-9), bulao sign(0), bulao sign(9))
+    dikhao("grades:", bulao grade(95), bulao grade(85), bulao grade(75), bulao grade(65), bulao grade(5))
+    dikhao("collatz(27) =", bulao collatz(27))
+    dikhao("primes below 1000 =", bulao count_primes(1000))
+
+    rakho runs = 0
+    ghoom [i : 5 -> 2] chal
+        runs = runs + 1
+    khatam
+    dikhao("empty range ran", runs, "times")
+
+    rakho n = 4
+    ghoom [i : 0 -> n] chal
+        n = n + 1
+        runs = runs + 1
+    khatam
+    dikhao("range evaluated once:", runs, "iterations, n =", n)
+    waapis 0
+khatam

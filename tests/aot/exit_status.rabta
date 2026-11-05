@@ -1,0 +1,8 @@
+// EXPECT_EXIT: 44
+// exit_status.rabta - main's waapis value becomes the process exit status
+// (modulo 256): 300 & 255 = 44.
+
+kaam main() shuru
+    dikhao("returning 300")
+    waapis 300
+khatam

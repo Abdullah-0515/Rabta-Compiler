@@ -2,10 +2,10 @@
  * ============================================================================
  *  Rabta Programming Language
  *  Authors: Ansa Mubasher, Ahmed Yasin, Rana Muhammad Abdullah
- *  Course : Compiler Construction - Phase 1 (Flex + Bison tree-walking interpreter)
+ *  Course : Compiler Construction - Phase 2 (LLVM IR ahead-of-time compiler)
  * ============================================================================
  *
- *  rabta.y - Bison (LALR(1)) grammar.
+ *  rabta.y - Bison (LALR(1)) grammar and the rabtac compiler driver.
  *
  *  Every grammar action builds an AST node (ast.h). When the whole program
  *  has been reduced, the action of the start rule drives the rest of the
@@ -13,10 +13,11 @@
  *
  *      program  ->  semantic_check()   type checking + symbol table
  *               ->  protocol_check()   conversation (session type) checking
- *               ->  interpret()        tree-walking execution with actors
+ *               ->  llvm_generate()    LLVM IR module -> program.ll
+ *               ->  toolchain_build()  clang (or llc) -> native executable
  *
- *  The program is executed only if lexing, parsing and both semantic passes
- *  report zero errors. The grammar has 0 shift/reduce and 0 reduce/reduce
+ *  IR is generated only if lexing, parsing and both semantic passes report
+ *  zero errors. The grammar has 0 shift/reduce and 0 reduce/reduce
  *  conflicts (bison reports none; see `make` output).
  */
 
@@ -32,7 +33,10 @@
 #include "ast.h"
 #include "semantic.h"
 #include "protocol.h"
-#include "interpreter.h"
+#include "llvm_gen.h"
+#include "toolchain.h"
+
+#include <unistd.h>
 
 int  yylex(void);
 void yyerror(const char *msg);
@@ -44,6 +48,11 @@ const char *rabta_filename = "<stdin>";
 static int  syntax_error_count = 0;
 static int  opt_dump_ast = 0;     /* --ast   : print the annotated AST       */
 static int  opt_check_only = 0;   /* --check : stop after the semantic pass  */
+static int  opt_emit_llvm = 0;    /* -S      : only write the .ll file       */
+static int  opt_keep_ll = 0;      /* --keep-ll : keep the .ll after linking  */
+static int  opt_run = 0;          /* --run   : build, then run the program   */
+static const char *opt_output = NULL;  /* -o FILE                            */
+static ToolchainOptions tc_opt = { 0, 2, 0 };
 static int  rabta_status = 0;     /* process exit status                     */
 static Node *ast_root = NULL;
 
@@ -297,14 +306,108 @@ void yyerror(const char *msg)
     syntax_error_count++;
 }
 
+/* "dir/prog.rabta" -> "prog" + suffix (a fresh malloc'd string) */
+static char *derived_name(const char *path, const char *suffix)
+{
+    const char *base = strrchr(path, '/');
+    base = base ? base + 1 : path;
+    size_t n = strlen(base);
+    if (n > 6 && strcmp(base + n - 6, ".rabta") == 0)
+        n -= 6;
+    char *out = malloc(n + strlen(suffix) + 1);
+    if (!out) {
+        fprintf(stderr, "rabtac: out of memory\n");
+        exit(3);
+    }
+    memcpy(out, base, n);
+    strcpy(out + n, suffix);
+    return out;
+}
+
+static char *concat(const char *a, const char *b)
+{
+    char *out = malloc(strlen(a) + strlen(b) + 1);
+    if (!out) {
+        fprintf(stderr, "rabtac: out of memory\n");
+        exit(3);
+    }
+    strcpy(out, a);
+    strcat(out, b);
+    return out;
+}
+
+/* Generate IR, build the executable and (with --run) run it. */
+static int rabta_compile(Node *program)
+{
+    char *exe = NULL, *ll = NULL, *tmpdir = NULL;
+    int status;
+
+    if (opt_emit_llvm) {
+        ll = opt_output ? strdup(opt_output) : derived_name(rabta_filename, ".ll");
+        status = llvm_generate(program, rabta_filename, ll) == 0 ? 0 : 70;
+        free(ll);
+        return status;
+    }
+
+    if (opt_run && !opt_output) {
+        /* --run without -o: build in a private temporary directory */
+        const char *t = getenv("TMPDIR");
+        char *templ = concat(t && *t ? t : "/tmp", "/rabtac.XXXXXX");
+        if (!mkdtemp(templ)) {
+            perror("rabtac: mkdtemp");
+            free(templ);
+            return 70;
+        }
+        tmpdir = templ;
+        char *name = derived_name(rabta_filename, "");
+        char *dir = concat(tmpdir, "/");
+        exe = concat(dir, name);
+        free(dir);
+        free(name);
+    } else {
+        exe = opt_output ? strdup(opt_output) : derived_name(rabta_filename, "");
+    }
+    ll = concat(exe, ".ll");
+
+    status = llvm_generate(program, rabta_filename, ll) == 0 ? 0 : 70;
+    if (status == 0)
+        status = toolchain_build(ll, exe, &tc_opt) == 0 ? 0 : 70;
+    if (!opt_keep_ll || tmpdir)
+        unlink(ll);
+
+    if (status == 0 && opt_run) {
+        fflush(stdout);
+        char *argv[] = { exe, NULL };
+        if (!strchr(exe, '/')) {
+            char *rel = concat("./", exe);
+            argv[0] = rel;
+            status = toolchain_run(argv, tc_opt.verbose);
+            free(rel);
+        } else {
+            status = toolchain_run(argv, tc_opt.verbose);
+        }
+        if (status < 0)
+            status = 70;
+    }
+
+    if (tmpdir) {
+        unlink(exe);
+        rmdir(tmpdir);
+        free(tmpdir);
+    }
+    free(ll);
+    free(exe);
+    return status;
+}
+
 /*
  * Called from the action of the start rule once the full AST exists.
- * Runs the semantic pass and, if it is clean, the interpreter.
+ * Runs the semantic pass and, if it is clean, the code generator.
  */
 static int rabta_execute(Node *program)
 {
     if (lex_error_count > 0) {
-        fprintf(stderr, "%d lexical error(s); program not executed.\n", lex_error_count);
+        fprintf(stderr, "%d lexical error(s); program not compiled.\n", lex_error_count);
         return 1;
     }
 
@@ -315,23 +418,30 @@ static int rabta_execute(Node *program)
         ast_dump(stdout, program, 0);
 
     if (errors > 0) {
-        fprintf(stderr, "%d error(s) found; program not executed.\n", errors);
+        fprintf(stderr, "%d error(s) found; program not compiled.\n", errors);
         return 1;
     }
     if (opt_check_only) {
         printf("%s: OK (types and protocols check)\n", rabta_filename);
         return 0;
     }
-    return interpret(program);
+    return rabta_compile(program);
 }
 
 static void usage(const char *prog)
 {
     fprintf(stderr,
-            "Rabta interpreter (Phase 1)\n"
-            "usage: %s [--check] [--ast] program.rabta\n"
-            "  --check   run lexer, parser and semantic pass only\n"
-            "  --ast     print the annotated AST before running\n",
+            "Rabta compiler (Phase 2: LLVM IR, ahead-of-time)\n"
+            "usage: %s [options] program.rabta\n"
+            "  -o FILE          name of the output (default: program name without .rabta)\n"
+            "  -S, --emit-llvm  only write the LLVM IR file (default name: program.ll)\n"
+            "  --keep-ll        keep FILE.ll next to the executable\n"
+            "  --run            build the program, then run it (exit status = the program's)\n"
+            "  --llc            build with llc + link instead of clang alone\n"
+            "  -O0 .. -O3       optimisation level for clang / llc (default -O2)\n"
+            "  -v               print the clang / llc commands\n"
+            "  --check          run lexer, parser and semantic pass only\n"
+            "  --ast            print the annotated AST\n",
             prog);
 }
 
@@ -340,26 +450,49 @@ int main(int argc, char **argv)
     const char *path = NULL;
 
     for (int i = 1; i < argc; i++) {
-        if (strcmp(argv[i], "--check") == 0)
+        const char *a = argv[i];
+        if (strcmp(a, "--check") == 0)
             opt_check_only = 1;
-        else if (strcmp(argv[i], "--ast") == 0)
+        else if (strcmp(a, "--ast") == 0)
             opt_dump_ast = 1;
-        else if (strcmp(argv[i], "-h") == 0 || strcmp(argv[i], "--help") == 0) {
+        else if (strcmp(a, "-S") == 0 || strcmp(a, "--emit-llvm") == 0)
+            opt_emit_llvm = 1;
+        else if (strcmp(a, "--keep-ll") == 0)
+            opt_keep_ll = 1;
+        else if (strcmp(a, "--run") == 0)
+            opt_run = 1;
+        else if (strcmp(a, "--llc") == 0)
+            tc_opt.use_llc = 1;
+        else if (strcmp(a, "-v") == 0)
+            tc_opt.verbose = 1;
+        else if (a[0] == '-' && a[1] == 'O' && a[2] >= '0' && a[2] <= '3' && a[3] == '\0')
+            tc_opt.opt_level = a[2] - '0';
+        else if (strcmp(a, "-o") == 0) {
+            if (++i == argc) {
+                fprintf(stderr, "rabtac: -o needs a file name\n");
+                return 64;
+            }
+            opt_output = argv[i];
+        } else if (strcmp(a, "-h") == 0 || strcmp(a, "--help") == 0) {
             usage(argv[0]);
             return 0;
-        } else if (argv[i][0] == '-' && argv[i][1] != '\0') {
-            fprintf(stderr, "rabta: unknown option '%s'\n", argv[i]);
+        } else if (a[0] == '-' && a[1] != '\0') {
+            fprintf(stderr, "rabtac: unknown option '%s'\n", a);
             usage(argv[0]);
             return 64;
         } else if (path) {
-            fprintf(stderr, "rabta: only one program file may be given\n");
+            fprintf(stderr, "rabtac: only one program file may be given\n");
             return 64;
         } else
-            path = argv[i];
+            path = a;
     }
 
     if (!path) {
         usage(argv[0]);
+        return 64;
+    }
+    if (opt_emit_llvm && opt_run) {
+        fprintf(stderr, "rabtac: -S and --run cannot be combined\n");
         return 64;
     }
 
@@ -374,7 +507,7 @@ int main(int argc, char **argv)
     fclose(yyin);
 
     if (parse_result != 0 || syntax_error_count > 0) {
-        fprintf(stderr, "%d syntax error(s); program not executed.\n",
+        fprintf(stderr, "%d syntax error(s); program not compiled.\n",
                 syntax_error_count ? syntax_error_count : 1);
         return 1;
     }

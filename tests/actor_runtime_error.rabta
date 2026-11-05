@@ -1,0 +1,21 @@
+// EXPECT: runtime error: division by zero
+// EXPECT_EXIT: 2
+// A runtime error inside an actor thread ends the whole program.
+baatcheet Job shuru
+    client bolega i64
+    server bolega i64
+khatam
+
+banda divider(sira s : Job.server) shuru
+    rakho d = suno s
+    bolo s, 100 / d
+khatam
+
+kaam main() shuru
+    nali c : Job
+    paida divider(c.server)
+    bolo c.client, 0
+    rakho r = suno c.client
+    dikhao(r)
+    waapis 0
+khatam

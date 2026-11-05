@@ -27,12 +27,13 @@ stack.hh
 
 # ---- Executables ----
 /rabta
+/rabtac
 /rabta_*
 *.out.tmp
 a.out
 *.exe
 
-# ---- Build folders (Phase 2: LLVM / CMake) ----
+# ---- Build folders and LLVM output (compiled programs, .ll files) ----
 build/
 bin/
 obj/

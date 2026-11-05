@@ -1,0 +1,111 @@
+// queue.rabta - bounded channel queues: 20 messages in a row (more than
+// the queue capacity of 16, so bolo has to wait on not_full), then a
+// thali sent in both directions.
+
+baatcheet Burst shuru
+    client bolega i64
+    client bolega i64
+    client bolega i64
+    client bolega i64
+    client bolega i64
+    client bolega i64
+    client bolega i64
+    client bolega i64
+    client bolega i64
+    client bolega i64
+    client bolega i64
+    client bolega i64
+    client bolega i64
+    client bolega i64
+    client bolega i64
+    client bolega i64
+    client bolega i64
+    client bolega i64
+    client bolega i64
+    client bolega i64
+    server bolega i64
+    client bolega thali[4]
+    server bolega thali[4]
+khatam
+
+banda adder(sira s : Burst.server) shuru
+    rakho sum = 0
+    rakho x1 = suno s
+    sum = sum + x1
+    rakho x2 = suno s
+    sum = sum + x2
+    rakho x3 = suno s
+    sum = sum + x3
+    rakho x4 = suno s
+    sum = sum + x4
+    rakho x5 = suno s
+    sum = sum + x5
+    rakho x6 = suno s
+    sum = sum + x6
+    rakho x7 = suno s
+    sum = sum + x7
+    rakho x8 = suno s
+    sum = sum + x8
+    rakho x9 = suno s
+    sum = sum + x9
+    rakho x10 = suno s
+    sum = sum + x10
+    rakho x11 = suno s
+    sum = sum + x11
+    rakho x12 = suno s
+    sum = sum + x12
+    rakho x13 = suno s
+    sum = sum + x13
+    rakho x14 = suno s
+    sum = sum + x14
+    rakho x15 = suno s
+    sum = sum + x15
+    rakho x16 = suno s
+    sum = sum + x16
+    rakho x17 = suno s
+    sum = sum + x17
+    rakho x18 = suno s
+    sum = sum + x18
+    rakho x19 = suno s
+    sum = sum + x19
+    rakho x20 = suno s
+    sum = sum + x20
+    bolo s, sum
+    thali v[4] = suno s
+    ghoom [i : 0 -> 4] chal
+        v[i] = v[i] * sum
+    khatam
+    bolo s, v
+khatam
+
+kaam main() shuru
+    nali ch : Burst
+    paida adder(ch.server)
+    bolo ch.client, 1
+    bolo ch.client, 2
+    bolo ch.client, 3
+    bolo ch.client, 4
+    bolo ch.client, 5
+    bolo ch.client, 6
+    bolo ch.client, 7
+    bolo ch.client, 8
+    bolo ch.client, 9
+    bolo ch.client, 10
+    bolo ch.client, 11
+    bolo ch.client, 12
+    bolo ch.client, 13
+    bolo ch.client, 14
+    bolo ch.client, 15
+    bolo ch.client, 16
+    bolo ch.client, 17
+    bolo ch.client, 18
+    bolo ch.client, 19
+    bolo ch.client, 20
+    rakho sum = suno ch.client
+    dikhao("sum of 1..20 =", sum)
+    thali v[4] = [1, 2, 3, 4]
+    bolo ch.client, v
+    v = suno ch.client
+    dikhao("scaled thali :", v)
+    waapis 0
+khatam

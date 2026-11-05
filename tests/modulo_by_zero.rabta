@@ -1,0 +1,7 @@
+// EXPECT: runtime error: modulo by zero
+// EXPECT_EXIT: 2
+kaam main() shuru
+    rakho n = 0
+    dikhao(7 % n)
+    waapis 0
+khatam

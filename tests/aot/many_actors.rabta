@@ -1,0 +1,41 @@
+// many_actors.rabta - pthread runtime: 40 actor threads (the thread
+// registry grows past its first 16 entries), and actors that spawn actors.
+
+baatcheet Kaam shuru
+    client bolega i64
+    server bolega i64
+khatam
+
+banda squarer(sira s : Kaam.server) shuru
+    rakho x = suno s
+    bolo s, x * x
+khatam
+
+// a manager hires its own squarer and forwards n + 1 to it
+banda manager(sira up : Kaam.server) shuru
+    rakho n = suno up
+    nali down : Kaam
+    paida squarer(down.server)
+    bolo down.client, n + 1
+    rakho r = suno down.client
+    bolo up, r
+khatam
+
+kaam main() shuru
+    rakho total = 0
+    ghoom [i : 1 -> 41] chal
+        nali c : Kaam
+        paida squarer(c.server)
+        bolo c.client, i
+        rakho sq = suno c.client
+        total = total + sq
+    khatam
+    dikhao("sum of squares 1..40 =", total)
+
+    nali m : Kaam
+    paida manager(m.server)
+    bolo m.client, 9
+    rakho r = suno m.client
+    dikhao("manager answered", r)
+    waapis 0
+khatam

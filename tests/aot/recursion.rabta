@@ -1,0 +1,64 @@
+// recursion.rabta - kaam calls: mutual recursion (is_even calls is_odd,
+// which is defined later), deep recursion, many arguments.
+
+kaam is_even(n) shuru
+    agar n == 0 shuru
+        waapis 1
+    khatam
+    waapis bulao is_odd(n - 1)
+khatam
+
+kaam is_odd(n) shuru
+    agar n == 0 shuru
+        waapis 0
+    khatam
+    waapis bulao is_even(n - 1)
+khatam
+
+kaam ack(m, n) shuru
+    agar m == 0 shuru
+        waapis n + 1
+    khatam
+    agar n == 0 shuru
+        waapis bulao ack(m - 1, 1)
+    khatam
+    waapis bulao ack(m - 1, bulao ack(m, n - 1))
+khatam
+
+kaam fib(n) shuru
+    agar n < 2 shuru
+        waapis n
+    khatam
+    waapis bulao fib(n - 1) + bulao fib(n - 2)
+khatam
+
+kaam depth(n) shuru
+    agar n == 0 shuru
+        waapis 0
+    khatam
+    waapis 1 + bulao depth(n - 1)
+khatam
+
+kaam gcd(a, b) shuru
+    jab_tak b != 0 chal
+        rakho t = a % b
+        a = b
+        b = t
+    khatam
+    waapis a
+khatam
+
+kaam weighted(a, b, c, d, e, f) shuru
+    waapis a + 2 * b + 3 * c + 4 * d + 5 * e + 6 * f
+khatam
+
+kaam main() shuru
+    dikhao("is_even(10) =", bulao is_even(10), " is_odd(7) =", bulao is_odd(7))
+    dikhao("ack(2, 3)   =", bulao ack(2, 3))
+    dikhao("ack(3, 3)   =", bulao ack(3, 3))
+    dikhao("fib(25)     =", bulao fib(25))
+    dikhao("depth(10000) =", bulao depth(10000))
+    dikhao("gcd(1071, 462) =", bulao gcd(1071, 462))
+    dikhao("weighted    =", bulao weighted(1, 2, 3, 4, 5, 6))
+    waapis 0
+khatam

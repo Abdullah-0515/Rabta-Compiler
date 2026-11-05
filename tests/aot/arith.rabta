@@ -1,0 +1,28 @@
+// arith.rabta - i64 corner cases in the generated code: wrap-around,
+// INT64_MIN / -1 (would trap on x86-64 if emitted as a bare sdiv),
+// signed division/modulo, comparisons and short-circuit && / ||.
+
+kaam main() shuru
+    rakho big = 9223372036854775807
+    rakho min = -9223372036854775807 - 1
+    dikhao("max + 1      =", big + 1)
+    dikhao("min - 1      =", min - 1)
+    dikhao("big * 2      =", big * 2)
+    dikhao("min / -1     =", min / -1)
+    dikhao("min % -1     =", min % -1)
+    dikhao("-7 / 2       =", -7 / 2)
+    dikhao("-7 % 2       =", -7 % 2)
+    dikhao("7 % -2       =", 7 % -2)
+    dikhao("-(-5)        =", -(-5))
+    dikhao("!0 !7        =", !0, !7)
+    dikhao("10 - 2 - 3   =", 10 - 2 - 3)
+    dikhao("100 / 10 / 5 =", 100 / 10 / 5)
+    dikhao("cmp          =", 3 < 4, 4 <= 4, 5 > 6, 6 >= 7, 1 == 1, 1 != 1)
+
+    // short-circuit: 1 / zero is never evaluated
+    rakho zero = 0
+    dikhao("0 && 1/0     =", zero != 0 && 1 / zero == 1)
+    dikhao("1 || 1/0     =", zero == 0 || 1 / zero == 1)
+    dikhao("&& value     =", 5 && 7, 5 && 0, 0 || 9)
+    waapis 0
+khatam

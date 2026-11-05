@@ -1,0 +1,62 @@
+// arrays.rabta - thali: heap allocation, bounds-checked indexing,
+// pass by reference to a kaam, re-declaration inside a loop, big arrays.
+
+kaam fill(thali a, n, v) shuru
+    ghoom [i : 0 -> n] chal
+        a[i] = v * i
+    khatam
+    waapis 0
+khatam
+
+kaam total(thali a, n) shuru
+    rakho s = 0
+    ghoom [i : 0 -> n] chal
+        s = s + a[i]
+    khatam
+    waapis s
+khatam
+
+kaam reverse(thali a, n) shuru
+    rakho lo = 0
+    rakho hi = n - 1
+    jab_tak lo < hi chal
+        rakho t = a[lo]
+        a[lo] = a[hi]
+        a[hi] = t
+        lo = lo + 1
+        hi = hi - 1
+    khatam
+    waapis 0
+khatam
+
+kaam local_sum(n) shuru
+    thali tmp[50]
+    ghoom [i : 0 -> n] chal
+        tmp[i] = i
+    khatam
+    waapis bulao total(tmp, n)
+khatam
+
+kaam main() shuru
+    thali a[8]
+    dikhao("zeroed  :", a)
+    bulao fill(a, 8, 3)
+    dikhao("filled  :", a)
+    bulao reverse(a, 8)
+    dikhao("reversed:", a)
+    dikhao("total   :", bulao total(a, 8))
+
+    // a thali declared in a loop is a fresh, zero-filled array each time
+    ghoom [r : 0 -> 3] chal
+        thali t[4] = [r, r + 1]
+        t[3] = r * 10
+        dikhao("round", r, ":", t, "sum", bulao total(t, 4))
+    khatam
+
+    dikhao("local_sum(50) =", bulao local_sum(50))
+
+    thali big[1000000]
+    big[999999] = 7
+    dikhao("big[999999] + big[0] =", big[999999] + big[0])
+    waapis 0
+khatam
