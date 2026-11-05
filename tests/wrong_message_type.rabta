@@ -1,0 +1,21 @@
+// EXPECT: protocol violation: Tartib.client sends the wrong message type at step 1 (expected bolo thali[3], found bolo i64)
+// The protocol says the client sends a thali[3], but main sends an i64.
+
+baatcheet Tartib shuru
+    client bolega thali[3]
+    server bolega i64
+khatam
+
+banda summer(sira s : Tartib.server) shuru
+    thali data[3] = suno s
+    bolo s, data[0] + data[1] + data[2]
+khatam
+
+kaam main() shuru
+    nali ch : Tartib
+    paida summer(ch.server)
+    bolo ch.client, 5               // ERROR: expected a thali[3]
+    rakho total = suno ch.client
+    dikhao(total)
+    waapis 0
+khatam

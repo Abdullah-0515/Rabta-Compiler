@@ -1,0 +1,22 @@
+// EXPECT: protocol violation: line.client (Hisaab.client) is used inside the ghoom loop on line 17; loop bodies must be protocol-neutral
+// A loop could run any number of times, but the protocol has exactly 2 steps.
+
+baatcheet Hisaab shuru
+    client bolega i64
+    server bolega i64
+khatam
+
+banda server(sira s : Hisaab.server) shuru
+    rakho n = suno s
+    bolo s, n
+khatam
+
+kaam main() shuru
+    nali line : Hisaab
+    paida server(line.server)
+    ghoom [i : 0 -> 1] chal
+        bolo line.client, i         // ERROR: endpoint declared outside the loop
+    khatam
+    rakho ans = suno line.client
+    waapis 0
+khatam

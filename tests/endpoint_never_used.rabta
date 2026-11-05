@@ -1,0 +1,14 @@
+// EXPECT: protocol violation: endpoint line.server (Hisaab.server) is never used in main
+// main creates a channel but nobody plays the server role.
+
+baatcheet Hisaab shuru
+    client bolega i64
+    server bolega i64
+khatam
+
+kaam main() shuru
+    nali line : Hisaab
+    bolo line.client, 1
+    rakho ans = suno line.client
+    waapis 0
+khatam

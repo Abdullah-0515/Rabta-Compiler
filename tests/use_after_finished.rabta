@@ -1,0 +1,21 @@
+// EXPECT: protocol violation: Hisaab.client is used after the conversation finished (found bolo on line.client, but all 2 step(s) of Hisaab are done)
+// main keeps talking after the protocol is complete.
+
+baatcheet Hisaab shuru
+    client bolega i64
+    server bolega i64
+khatam
+
+banda server(sira s : Hisaab.server) shuru
+    rakho n = suno s
+    bolo s, n + 1
+khatam
+
+kaam main() shuru
+    nali line : Hisaab
+    paida server(line.server)
+    bolo line.client, 1
+    rakho ans = suno line.client
+    bolo line.client, ans           // ERROR: the conversation is over
+    waapis 0
+khatam

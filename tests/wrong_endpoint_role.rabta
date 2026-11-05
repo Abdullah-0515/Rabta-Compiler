@@ -1,0 +1,17 @@
+// EXPECT: type mismatch: argument 1 of paida server: expected sira Hisaab.server, found sira Hisaab.client
+baatcheet Hisaab shuru
+    client bolega i64
+    server bolega i64
+khatam
+
+banda server(sira s : Hisaab.server) shuru
+    rakho n = suno s
+    bolo s, n
+khatam
+
+kaam main() shuru
+    nali line : Hisaab
+    paida server(line.client)       // ERROR: the server needs the server end
+    bolo line.server, 1
+    waapis 0
+khatam

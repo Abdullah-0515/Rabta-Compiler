@@ -1,0 +1,25 @@
+// EXPECT: protocol violation: the branches of agar leave line.client (Hisaab.client) in different states (agar: 1 step(s) done, warna: 0 step(s) done)
+// Only one branch sends, so the server might wait forever.
+
+baatcheet Hisaab shuru
+    client bolega i64
+    server bolega i64
+khatam
+
+banda server(sira s : Hisaab.server) shuru
+    rakho n = suno s
+    bolo s, n
+khatam
+
+kaam main() shuru
+    nali line : Hisaab
+    paida server(line.server)
+    rakho x = 5
+    agar x > 3 shuru
+        bolo line.client, x
+    khatam warna shuru
+        dikhao("not sending")
+    khatam
+    rakho ans = suno line.client
+    waapis 0
+khatam

@@ -1,0 +1,24 @@
+// EXPECT: protocol violation: Hisaab.client must speak first (expected bolo i64, found suno)
+// The rejected program from the proposal: main receives before it sends,
+// so both sides would wait forever.
+
+baatcheet Hisaab shuru
+    client bolega i64
+    server bolega i64
+khatam
+
+banda server(sira s : Hisaab.server) shuru
+    rakho n = suno s
+    rakho total = 0
+    ghoom [i : 1 -> n + 1] chal
+        total = total + i
+    khatam
+    bolo s, total
+khatam
+
+kaam main() shuru
+    nali line : Hisaab
+    paida server(line.server)
+    rakho ans = suno line.client    // ERROR: client must bolo first
+    waapis 0
+khatam

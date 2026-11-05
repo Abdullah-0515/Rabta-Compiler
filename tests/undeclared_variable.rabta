@@ -1,0 +1,10 @@
+// EXPECT: undeclared variable 'total'
+// total is used before it is declared with rakho.
+
+kaam main() shuru
+    rakho n = 10
+    ghoom [i : 0 -> n] chal
+        total = total + i           // ERROR: total was never declared
+    khatam
+    waapis 0
+khatam

@@ -1,0 +1,6 @@
+// EXPECT: syntax error
+kaam main() shuru
+    rakho x = (1 + 2
+    dikhao(x)
+    waapis 0
+khatam

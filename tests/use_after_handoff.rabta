@@ -1,0 +1,21 @@
+// EXPECT: protocol violation: line.server (Hisaab.server) was handed to banda 'server' with paida on line 16 and cannot be used here any more (found suno)
+// After paida gives line.server to an actor, main may not use it.
+
+baatcheet Hisaab shuru
+    client bolega i64
+    server bolega i64
+khatam
+
+banda server(sira s : Hisaab.server) shuru
+    rakho n = suno s
+    bolo s, n
+khatam
+
+kaam main() shuru
+    nali line : Hisaab
+    paida server(line.server)
+    bolo line.client, 1
+    rakho stolen = suno line.server // ERROR: line.server belongs to the actor
+    rakho ans = suno line.client
+    waapis 0
+khatam

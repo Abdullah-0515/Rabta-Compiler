@@ -1,0 +1,21 @@
+// EXPECT: protocol violation: Hisaab.server must listen first (expected suno i64, found bolo)
+// The server answers before it has been asked.
+
+baatcheet Hisaab shuru
+    client bolega i64
+    server bolega i64
+khatam
+
+banda server(sira s : Hisaab.server) shuru
+    bolo s, 42                      // ERROR: server must suno first
+    rakho n = suno s
+khatam
+
+kaam main() shuru
+    nali line : Hisaab
+    paida server(line.server)
+    bolo line.client, 10
+    rakho ans = suno line.client
+    dikhao(ans)
+    waapis 0
+khatam

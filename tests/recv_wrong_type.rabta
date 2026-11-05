@@ -1,0 +1,21 @@
+// EXPECT: protocol violation: Hisaab.server receives the wrong message type at step 1 (expected suno i64, found suno into thali[4])
+// The server receives an i64 message into a thali.
+
+baatcheet Hisaab shuru
+    client bolega i64
+    server bolega i64
+khatam
+
+banda server(sira s : Hisaab.server) shuru
+    thali n[4] = suno s             // ERROR: the message is an i64
+    bolo s, n[0]
+khatam
+
+kaam main() shuru
+    nali line : Hisaab
+    paida server(line.server)
+    bolo line.client, 100
+    rakho ans = suno line.client
+    dikhao(ans)
+    waapis 0
+khatam

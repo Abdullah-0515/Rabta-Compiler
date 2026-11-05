@@ -1,0 +1,19 @@
+// EXPECT: protocol violation: conversation on line.client (Hisaab.client) is unfinished at waapis (next expected: suno i64, step 2 of 2)
+// main sends n but never waits for the answer.
+
+baatcheet Hisaab shuru
+    client bolega i64
+    server bolega i64
+khatam
+
+banda server(sira s : Hisaab.server) shuru
+    rakho n = suno s
+    bolo s, n * 2
+khatam
+
+kaam main() shuru
+    nali line : Hisaab
+    paida server(line.server)
+    bolo line.client, 100
+    waapis 0                        // ERROR: the answer is never received
+khatam

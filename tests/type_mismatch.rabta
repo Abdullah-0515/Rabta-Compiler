@@ -1,0 +1,10 @@
+// EXPECT: type mismatch: operator '+' needs i64 operands, found i64 and thali[3]
+// A thali cannot be used as a number.
+
+kaam main() shuru
+    thali nums[3] = [1, 2, 3]
+    rakho x = 10
+    rakho y = x + nums              // ERROR: i64 + thali
+    dikhao(y)
+    waapis 0
+khatam

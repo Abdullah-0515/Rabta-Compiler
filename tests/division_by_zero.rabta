@@ -1,0 +1,8 @@
+// EXPECT: runtime error: division by zero
+// EXPECT_EXIT: 2
+// Passes the semantic pass, fails while running.
+kaam main() shuru
+    rakho zero = 0
+    dikhao(10 / zero)
+    waapis 0
+khatam

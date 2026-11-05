@@ -1,0 +1,11 @@
+// EXPECT: kaam 'sign' can reach its end without waapis
+kaam sign(n) shuru
+    agar n > 0 shuru
+        waapis 1
+    khatam                          // ERROR: no waapis when n <= 0
+khatam
+
+kaam main() shuru
+    dikhao(bulao sign(5))
+    waapis 0
+khatam

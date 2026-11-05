@@ -1,0 +1,20 @@
+// EXPECT: protocol violation: conversation on s (Hisaab.server) is unfinished at the end of banda 'server' (next expected: bolo i64, step 2 of 2)
+// The actor receives the question but never answers.
+
+baatcheet Hisaab shuru
+    client bolega i64
+    server bolega i64
+khatam
+
+banda server(sira s : Hisaab.server) shuru
+    rakho n = suno s
+    dikhao(n)
+khatam                              // ERROR: bolo s, ... is missing
+
+kaam main() shuru
+    nali line : Hisaab
+    paida server(line.server)
+    bolo line.client, 100
+    rakho ans = suno line.client
+    waapis 0
+khatam

@@ -1,0 +1,9 @@
+// EXPECT: kaam 'add' expects 2 argument(s), found 3
+kaam add(a, b) shuru
+    waapis a + b
+khatam
+
+kaam main() shuru
+    dikhao(bulao add(1, 2, 3))      // ERROR: too many arguments
+    waapis 0
+khatam
