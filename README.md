@@ -1,6 +1,6 @@
 ---
 title: "Rabta Programming Language"
-subtitle: "Phase 1: Flex + Bison tree-walking interpreter with compile-time checked conversations"
+subtitle: "Phase 2: ahead-of-time compiler to LLVM IR and native executables"
 author: "Ansa Mubasher, Ahmed Yasin, Rana Muhammad Abdullah"
 ---
 
@@ -8,14 +8,23 @@ author: "Ansa Mubasher, Ahmed Yasin, Rana Muhammad Abdullah"
 
 **Course:** Compiler Construction (7th semester)
 **Authors:** Ansa Mubasher, Ahmed Yasin, Rana Muhammad Abdullah
-**Phase 1:** interpreter built with Flex, Bison and C only (no LLVM, no bytecode)
+**Phase 2:** ahead-of-time (AOT) compiler `rabtac`: Flex + Bison front end,
+LLVM IR code generation with the LLVM C API, native executables built by
+`clang` (or `llc`)
 
 Rabta is a small concurrent, message-passing language. A program is a set of
 independent actors (`banda`) that talk to each other only through typed
 channels (`nali`). The order, direction and type of every message on a channel
 is written down as a conversation protocol (`baatcheet`), and the compiler
-checks **before running** that every actor follows it. Programs that would
-deadlock or exchange the wrong data are rejected with a compile-time error.
+checks **at compile time** that every actor follows it. Programs that would
+deadlock or exchange the wrong data are rejected before any code is generated.
+
+In Phase 1 Rabta programs were executed by a tree-walking interpreter. In
+Phase 2 the same annotated AST is translated into an **LLVM IR module**
+(`.ll`), which `clang` compiles into a **native x86-64 executable**. Actors
+become POSIX threads and channels become mutex/condition-variable queues; the
+code for both is generated directly in the IR, so a compiled Rabta program
+needs nothing but libc and libpthread.
 
 ```
 // Protocol: who speaks, in what order, with what type
@@ -44,18 +53,21 @@ khatam
 ```
 
 ```
-$ ./rabta examples/hisaab.rabta
+$ ./rabtac examples/hisaab.rabta -o hisaab      # compile to a native binary
+$ ./hisaab
 5050
+$ file hisaab
+hisaab: ELF 64-bit LSB pie executable, x86-64, dynamically linked, ...
 ```
 
 If `main` calls `suno line.client` before `bolo line.client, 100`, Rabta refuses
-to run the program:
+to compile the program, and no IR or executable is produced:
 
 ```
-$ ./rabta tests/client_suno_first.rabta
+$ ./rabtac tests/client_suno_first.rabta
 tests/client_suno_first.rabta:22: error: protocol violation: Hisaab.client must
 speak first (expected bolo i64, found suno)
-1 error(s) found; program not executed.
+1 error(s) found; program not compiled.
 ```
 
 # 1. Dependencies and installation
@@ -64,17 +76,34 @@ Everything runs on Linux (tested on Ubuntu 24.04 under WSL 2).
 
 | Tool | Tested version | Purpose |
 |------|----------------|---------|
-| gcc  | 13.3 | C compiler (C11 + POSIX threads) |
+| gcc  | 13.3 | builds the compiler itself (C11) |
 | flex | 2.6.4 | lexer generator |
 | bison | 3.8.2 | LALR(1) parser generator |
+| llvm, llvm-dev | 18.1 | LLVM C API headers/library (`llvm-config`), `llc`, `llvm-as` |
+| clang | 18.1 | compiles the generated `.ll` into a native executable |
 | make | 4.3 | build |
 | pandoc + pdflatex | 3.1 | only to regenerate README.pdf |
 
-Install the build tools:
+Install everything needed to build and use the compiler:
 
 ```
 sudo apt update
-sudo apt install build-essential flex bison make
+sudo apt install build-essential flex bison make llvm llvm-dev clang
+```
+
+Check the LLVM installation:
+
+```
+llvm-config --version        # 18.1.3
+clang --version
+```
+
+If your distribution only installs versioned names (for example
+`llvm-config-18`, `clang-18`), pass them explicitly:
+
+```
+make LLVM_CONFIG=llvm-config-18
+RABTA_CLANG=clang-18 RABTA_LLC=llc-18 ./rabtac program.rabta
 ```
 
 Optional, only needed for `make pdf`:
@@ -83,44 +112,85 @@ Optional, only needed for `make pdf`:
 sudo apt install pandoc texlive-latex-recommended texlive-latex-extra
 ```
 
-# 2. Building
+# 2. Building the compiler
 
 ```
-make            # builds ./rabta
-make test       # builds, then runs all examples and negative tests
-make clean      # removes every generated file
+make            # builds ./rabtac
+make examples   # compiles every examples/*.rabta into build/<name>
+make ir         # writes the LLVM IR of every example to build/<name>.ll
+make test       # builds, then runs the whole test suite (PASS/FAIL)
+make clean      # removes every generated file (including build/)
 make pdf        # regenerates README.pdf from README.md
 ```
 
-`make` runs exactly the pipeline required by the course:
+`make` runs this pipeline:
 
 ```
-bison -d -Wall rabta.y        # -> rabta.tab.c, rabta.tab.h
-flex rabta.l                  # -> lex.yy.c
-gcc -std=gnu11 -Wall -Wextra -O2 -g -c ...   # every .c file
-gcc ... -o rabta *.o -lpthread
+bison -d -Wall rabta.y                    # -> rabta.tab.c, rabta.tab.h
+flex rabta.l                              # -> lex.yy.c
+gcc -std=gnu11 -Wall -Wextra -O2 -g $(llvm-config --cflags) -c ...
+gcc ... -o rabtac *.o $(llvm-config --ldflags --libs core analysis target native)
 ```
 
-The grammar has **0 shift/reduce and 0 reduce/reduce conflicts** (Bison prints no
-warnings with `-Wall`), and all C files compile with **no warnings** under
-`-Wall -Wextra`.
+The grammar has **0 shift/reduce and 0 reduce/reduce conflicts**, and all C
+files compile with **no warnings** under `-Wall -Wextra`.
 
-# 3. Running
+# 3. Compiling and running Rabta programs
 
 ```
-./rabta program.rabta            # check, then run
-./rabta --check program.rabta    # lexer + parser + semantic pass only
-./rabta --ast program.rabta      # print the annotated AST, then run
+./rabtac program.rabta                 # -> native executable ./program
+./rabtac program.rabta -o app          # -> native executable ./app
+./rabtac -S program.rabta              # -> LLVM IR only: ./program.ll
+./rabtac -S program.rabta -o out.ll    # -> LLVM IR only: ./out.ll
+./rabtac --keep-ll program.rabta       # executable + keep ./program.ll
+./rabtac --llc program.rabta           # build through llc + link
+./rabtac -O0 program.rabta             # optimisation level -O0 .. -O3 (default -O2)
+./rabtac -v program.rabta              # show the clang / llc commands
+./rabtac --run program.rabta           # compile to a temp dir, run, clean up
+./rabtac --check program.rabta         # lexer + parser + semantic pass only
+./rabtac --ast program.rabta           # also print the annotated AST
 ```
 
-Exit status:
+Without `-o`, the output is written to the current directory and named after
+the source file (`examples/hisaab.rabta` -> `./hisaab`).
+
+**What happens inside `rabtac`:**
+
+```
+program.rabta --Flex/Bison--> AST --semantic + protocol checks--> annotated AST
+              --LLVM C API--> program.ll --clang -O2 ... -lpthread--> program
+```
+
+With `--llc` the last step is split into the two classic back-end steps:
+
+```
+llc -O2 -filetype=obj -relocation-model=pic program.ll -o program.o
+clang program.o -o program -lpthread
+```
+
+The `.ll` file can also be compiled by hand with any LLVM 18 toolchain:
+
+```
+./rabtac -S examples/hisaab.rabta -o hisaab.ll
+clang -O2 hisaab.ll -o hisaab -lpthread
+./hisaab
+```
+
+Exit status of `rabtac`:
+
+| Status | Meaning |
+|--------|---------|
+| 0 | executable (or `.ll`) written; with `--run`: the program's own status |
+| 1 | lexical, syntax, type or protocol error: **no IR and no executable** |
+| 64 / 66 | bad command line / source file cannot be opened |
+| 70 | IR generation or clang/llc failed (e.g. clang not installed) |
+
+Exit status of a **compiled program**:
 
 | Status | Meaning |
 |--------|---------|
 | value of `waapis` in `main` (mod 256) | the program ran (all examples return 0) |
-| 1 | lexical, syntax, type or protocol error: the program was **not** run |
-| 2 | runtime error (division by zero, thali index out of bounds) |
-| 64 / 66 | bad command line / file cannot be opened |
+| 2 | runtime error (division or modulo by zero, thali index out of bounds) |
 
 ## Examples
 
@@ -136,11 +206,11 @@ Exit status:
 | `examples/pipeline.rabta` | a chain of three actors, each with two endpoints | `576` |
 | `examples/sort_server.rabta` | sending a whole `thali` as a message | sorted array |
 
-Expected outputs are stored in `examples/expected/*.out` and checked by
-`make test`.
-
 ```
-$ ./rabta examples/ping_pong.rabta
+$ make examples
+./rabtac examples/ping_pong.rabta -o build/ping_pong
+...
+$ ./build/ping_pong
 starting ping-pong
 ping 1
     pong 1
@@ -149,19 +219,45 @@ ping 2
 ping 3
     pong 3
 pinger got the last pong: 3
+
+$ ./rabtac tests/division_by_zero.rabta -o dz && ./dz; echo "exit $?"
+tests/division_by_zero.rabta:6: runtime error: division by zero
+exit 2
 ```
 
 ## Tests
 
-`make test` runs `tests/run_tests.sh`, which prints PASS/FAIL for every program:
+`make test` runs `tests/run_tests.sh`. Every program is compiled **ahead of
+time** into a native executable in `build/tests/`, and that executable is run.
+The suite has 63 checks in five groups:
 
-* every `examples/*.rabta` must exit with 0 and print exactly its `.out` file;
-* every `tests/*.rabta` must be rejected. The first line of each test,
-  `// EXPECT: <message>`, gives the text that must appear on stderr. Compile-time
-  errors must exit with status 1 **and print nothing on stdout**, which shows the
-  program was not executed. Runtime-error tests declare `// EXPECT_EXIT: 2`.
+1. **examples, clang pipeline:** every `examples/*.rabta` is compiled, must
+   exit with 0 and print exactly `examples/expected/NAME.out`;
+2. **examples, llc pipeline:** the same, built with `--llc`;
+3. **code generation tests** (`tests/aot/`): programs that target the
+   generated code, compared with `tests/aot/expected/NAME.out`. Their
+   expected outputs were produced by the Phase 1 interpreter, so these tests
+   also show that the compiler and the interpreter agree;
+4. **LLVM IR checks:** `rabtac -S` must produce IR that `llvm-as` accepts,
+   that defines `i32 @main`, and that declares `@pthread_create` whenever the
+   program has a `banda`;
+5. **invalid programs** (`tests/*.rabta`): the first line,
+   `// EXPECT: <message>`, gives the text that must appear on stderr.
+   Compile-time errors must make `rabtac` exit with 1, print nothing on stdout
+   **and produce no executable**. Runtime-error tests declare
+   `// EXPECT_EXIT: 2`; they compile, and the compiled program must fail.
 
-| Test | Rejected because |
+| Code generation test | What it checks |
+|------|------------------|
+| `aot/arith` | wrap-around, `INT64_MIN / -1`, signed `/` and `%`, comparisons, short-circuit `&&`/`\|\|` |
+| `aot/recursion` | mutual recursion with forward references, Ackermann, recursion 10,000 deep, 6 arguments |
+| `aot/arrays` | heap `thali`, pass by reference, re-declaration inside a loop, a 1,000,000-element array |
+| `aot/control` | `waapis` inside loops and branches, `warna agar` chains, nested loops, empty ranges |
+| `aot/many_actors` | 40 actor threads (thread registry grows), actors that spawn actors |
+| `aot/queue` | 20 messages in a row (more than the queue capacity of 16), `thali` both ways |
+| `aot/exit_status` | `waapis 300` from `main` gives process exit status 44 |
+
+| Invalid program | Rejected because |
 |------|------------------|
 | `client_suno_first` | client receives before it sends (the proposal's example) |
 | `server_bolo_first` | server sends before it receives |
@@ -180,8 +276,11 @@ pinger got the last pong: 3
 | `wrong_arg_count` | `bulao` with too many arguments |
 | `missing_return` | a `kaam` path without `waapis` |
 | `syntax_error` | missing `)` |
-| `division_by_zero` | runtime error (exit 2) |
-| `index_out_of_bounds` | runtime error (exit 2) |
+| `division_by_zero` | runtime error in the compiled program (exit 2) |
+| `modulo_by_zero` | runtime error in the compiled program (exit 2) |
+| `index_out_of_bounds` | runtime error in the compiled program (exit 2) |
+| `negative_index` | runtime error in the compiled program (exit 2) |
+| `actor_runtime_error` | division by zero inside an actor thread ends the program (exit 2) |
 
 # 4. Language reference
 
@@ -375,15 +474,15 @@ allowed as a whole initialiser or assigned value, or as a statement. That way
 the textual order of statements is exactly the order of protocol actions.
 Messages are copied (a `thali` is deep-copied), so no memory is ever shared.
 
-**Program end.** When `main` returns, the interpreter waits for every actor,
-including actors started by other actors, to finish. Then it exits with
-`main`'s return value.
+**Program end.** When `main` returns, the compiled program waits for every
+actor, including actors started by other actors, to finish. Then it exits
+with `main`'s return value.
 
 # 5. The semantic pass
 
-The semantic pass runs after parsing and before anything is executed. If it
-reports any error, the program is **not run** and `rabta` exits with
-status 1. Each error has the form `file:line: error: message`.
+The semantic pass runs after parsing and before any code is generated. If it
+reports any error, **no LLVM IR and no executable are produced** and `rabtac`
+exits with status 1. Each error has the form `file:line: error: message`.
 
 ## 5.1 Type checking (semantic.c)
 
@@ -401,8 +500,9 @@ status 1. Each error has the form `file:line: error: message`.
 
 The pass also annotates the AST. Every variable gets a frame slot, every
 function and actor gets its frame size, and every name points to its
-declaration. The interpreter (and later the LLVM generator) use these
-annotations directly.
+declaration. The LLVM code generator uses these annotations directly: slots
+become `alloca`s, resolved declarations become direct `call`s, and endpoint
+roles become constant queue indices.
 
 ## 5.2 Protocol checking (protocol.c)
 
@@ -478,51 +578,166 @@ file:6: runtime error: index 5 is out of bounds for thali 'a' of size 5
       |                the start rule's action drives the steps below
   semantic.c           symbol tables, type checking, slot allocation
   protocol.c           protocol state-machine simulation
-      |                any error -> report, exit 1, never execute
-  interpreter.c        tree-walking execution
-  runtime.c            pthreads actors + bounded channel queues
+      |                any error -> report, exit 1, no IR is generated
+  llvm_gen.c           LLVM context/module/builder, types, variables, dikhao
+  llvm_flow.c          arithmetic, comparisons, agar/warna, loops
+  llvm_func.c          kaam, bulao, waapis, the C main()
+  llvm_actor.c         banda threads, nali queues, bolo/suno (pthreads)
+      |                LLVMVerifyModule, then LLVMPrintModuleToFile
+  program.ll
+      |
+  toolchain.c          clang -O2 program.ll -lpthread   (or llc + link)
+      |
+  native executable
 ```
 
-**Interpreter.** Each call of a `kaam`, and each actor, gets a frame: an array
-of slots indexed by the slot numbers from the semantic pass. There are no
-globals, so actors share nothing.
+## 6.1 Code generation with the LLVM C API
 
-**Runtime.** Each actor runs on its own POSIX thread with a 16 MiB stack. A
-channel holds two bounded FIFO queues (capacity 16), one per direction. Each
-queue is protected by a mutex, with condition variables `not_empty` (used by
-`suno`, which blocks until a message arrives) and `not_full` (used by `bolo`).
-After `main` returns, `rt_join_all()` joins every actor thread, including
-actors spawned while joining, so the program exits cleanly.
+`llvm_generate()` creates an `LLVMContextRef`, an `LLVMModuleRef` (with the
+host's target triple and data layout) and an `LLVMBuilderRef`, walks the
+annotated AST, checks the result with `LLVMVerifyModule` and writes it with
+`LLVMPrintModuleToFile`.
 
-**Checks done.** `make test` passes 28/28. The actor examples were each run
-300 times with identical output. Every example and test was also run under
-AddressSanitizer (no memory errors or leaks) and ThreadSanitizer (no data
-races).
+**Type mapping.**
 
-**Phase 2 (LLVM).** The AST is already annotated with types, frame slots and
-resolved declarations. Each `kaam` becomes an `llvm::Function` whose slots
-become `alloca`s, a `thali` becomes an array accessed with GEP, and each
-`banda` becomes a function started by `rt_spawn`. `bolo`/`suno` become calls
-to `rt_send`/`rt_recv` in the same `runtime.c`.
+| Rabta | LLVM IR |
+|-------|---------|
+| `i64` | `i64` |
+| condition | `i1` (`icmp ne %x, 0`), widened back to `i64` with `zext` |
+| `thali[N]` | heap block of `i64` (`ptr`) plus its length (`i64`) |
+| `nali` / `sira` endpoint | `ptr` to a `%rabta.chan`; the endpoint's role is known at compile time |
+| `kaam f(a, thali t)` | `define internal i64 @kaam.f(i64 %a, ptr %t, i64 %t.len)` |
+| `banda w(...)` | `define internal ptr @banda.w(ptr %args)` (a pthread start routine) |
+
+**Variables.** Every variable has a frame slot number from the semantic pass.
+Each slot is an `alloca` in the function's entry block (`%total = alloca i64`);
+`rakho` and assignment are `store`s and uses are `load`s. clang's `mem2reg`
+pass turns them into SSA registers at `-O1` and above.
+
+**Arithmetic.** `+ - *` are `add`/`sub`/`mul` without the `nsw` flag, so they
+wrap around like in Phase 1. `/` and `%` are `sdiv`/`srem` behind two checks:
+a divisor of 0 branches to a runtime error, and a divisor of -1 is replaced
+by `0 - x` (or 0), because `INT64_MIN / -1` traps on x86-64. Comparisons are
+`icmp slt/sle/sgt/sge/eq/ne`.
+
+**Control flow.** Every construct gets its own basic blocks:
+
+```
+agar c ... warna ...     br i1 %c, label %if.then, label %if.else  -> %if.end
+jab_tak c chal ...       %while.cond -> %while.body -> %while.cond / %while.end
+ghoom [i : a -> b] ...   %for.cond -> %for.body -> %for.inc -> %for.cond / %for.end
+a && b, a || b           %and.rhs / %and.end with a phi (short-circuit)
+```
+
+Code that follows a `waapis` is put in a block of its own, which LLVM then
+removes as unreachable.
+
+**Functions.** All `kaam`s are declared first, so calls may come before
+definitions (and mutual recursion works). `bulao` is a `call i64`, `waapis` is
+`ret i64`. A `thali` argument is passed by reference as its element pointer
+and length. Before every `ret` the function `free`s the arrays it declared.
+The names get a `kaam.` / `banda.` prefix, so a Rabta `kaam printf` cannot
+clash with libc. The real C entry point is generated as:
+
+```
+define i32 @main(i32 %argc, ptr %argv) {
+  call void @rabta.init()
+  %rv = call i64 @kaam.main()
+  call void @rabta.join_all()          ; wait for every banda
+  call void @rabta.shutdown()          ; free channels
+  ...
+  ret i32 %exit.code                    ; %rv & 255
+}
+```
+
+**Arrays.** `thali a[N]` is `calloc(N, 8)` (zero-filled). If the declaration
+runs again in a loop, the old array is freed first. Every `a[i]` checks
+`i <u N` (one unsigned compare catches negative indices too) and branches to
+`@rabta.index_fail` when it fails.
+
+**Output.** `dikhao` formats its line into a private buffer
+(`open_memstream`), in argument order, then `@rabta.emit` writes the whole
+line to stdout under `flockfile`, so lines from different actors never mix.
+
+**Runtime errors.** `@rabta.fail` / `@rabta.index_fail` take the stdout lock,
+flush stdout, print `file:line: runtime error: ...` to stderr and `exit(2)`,
+which also stops every actor thread. The source file name is a string
+constant in the module.
+
+## 6.2 Actors and channels in IR
+
+The actor runtime is not a separate C library. It is generated into every
+module that needs it, as IR functions that call declared POSIX functions:
+
+```
+declare i32 @pthread_create(ptr, ptr, ptr, ptr)
+declare i32 @pthread_join(i64, ptr)
+declare i32 @pthread_mutex_lock(ptr)
+declare i32 @pthread_mutex_unlock(ptr)
+declare i32 @pthread_cond_wait(ptr, ptr)
+declare i32 @pthread_cond_signal(ptr)
+
+%rabta.msg   = type { i64, ptr }                 ; value or length, thali copy
+%rabta.queue = type { [16 x %rabta.msg], i64, i64,   ; ring buffer, head, count
+                      [8 x i64], [8 x i64], [8 x i64] } ; mutex, not_empty, not_full
+%rabta.chan  = type { [2 x %rabta.queue], ptr }  ; one queue per receiving role
+```
+
+| IR function | Used for | What it does |
+|-------------|----------|--------------|
+| `@rabta.chan_new` | `nali` | `calloc` a channel, `pthread_mutex_init` / `pthread_cond_init` both queues, add it to the channel list |
+| `@rabta.send` | `bolo` | lock, `pthread_cond_wait(not_full)` while 16 messages are queued, enqueue, signal `not_empty`, unlock |
+| `@rabta.recv` | `suno` | lock, `pthread_cond_wait(not_empty)` while empty, dequeue, signal `not_full`, unlock |
+| `@rabta.spawn` | `paida` | `pthread_create` with a 16 MiB stack, record the thread id in a growing registry |
+| `@rabta.join_all` | end of `main` | `pthread_join` every registered thread, including ones started while joining |
+| `@rabta.shutdown` | end of `main` | destroy and free every channel and the registry |
+
+`paida w(x, ch.server)` evaluates its arguments, packs them into a heap struct
+(`{ i64, ptr }` here) and passes it to `@rabta.spawn(@banda.w, %args)`. The
+actor unpacks its parameters and frees the struct. `bolo` of a `thali` sends a
+`malloc`ed copy; `suno` copies it into the receiver's array and frees the
+message, so actors never share memory.
+
+## 6.3 Checks done
+
+* `make test`: **63 passed, 0 failed** (9 examples with clang, 9 with llc,
+  7 code generation tests, 16 IR checks, 22 invalid programs).
+* The examples and code generation tests also give identical output when
+  compiled with `-O0`.
+* The concurrent programs (`ping_pong`, `aot/queue`, `aot/many_actors`) were
+  each run 300 times with identical output.
+* The generated IR of every example and code generation test was compiled
+  with `clang -fsanitize=address` (no memory errors, no leaks) and with
+  `clang -fsanitize=thread` (no data races).
 
 # 7. Files
 
 | File | Description |
 |------|-------------|
 | `rabta.l` | Flex lexer: keywords, identifiers, integers, strings, operators, `//` comments, line tracking |
-| `rabta.y` | Bison grammar (0 conflicts), AST-building actions, error reporting, `main()` and the driver that runs the semantic pass and the interpreter |
+| `rabta.y` | Bison grammar (0 conflicts) with AST-building actions and error reporting; also the `rabtac` driver: `main()`, command-line options, and the pipeline semantic check -> IR -> executable |
 | `ast.h`, `ast.c` | AST node, list and type definitions, constructors, `--ast` pretty printer, cleanup |
 | `semantic.h`, `semantic.c` | scoped symbol table, type checking, call/return rules, slot allocation, error reporting |
 | `protocol.h`, `protocol.c` | protocol checker: endpoint state machines, branches, loops, hand-over |
-| `interpreter.h`, `interpreter.c` | tree-walking interpreter: frames, expressions, statements, calls, actors, messages |
-| `runtime.h`, `runtime.c` | actor threads, channels as bounded queues (mutex + condition variables), thread joining |
-| `Makefile` | `all`, `test`, `clean`, `pdf` targets |
+| `llvm_gen.h` | public interface of the code generator: `llvm_generate(program, source, out.ll)` |
+| `llvm_gen_priv.h` | code generator state (`Gen`: context, module, builders, LLVM types, frame slots) shared by the `llvm_*.c` files |
+| `llvm_gen.c` | LLVM context/module/builder setup, target data layout, type mapping, libc declarations, frame-slot `alloca`s, `rakho`/assignment, `thali` allocation and bounds-checked indexing, `dikhao`, runtime error helpers, statement/expression dispatch, verification and output of the module |
+| `llvm_flow.c` | arithmetic (with the division checks), comparisons, `!`, short-circuit `&&`/`\|\|`, `agar`/`warna` and loop basic blocks |
+| `llvm_func.c` | `kaam` declarations and definitions, parameter passing, `bulao` calls, `waapis`, the C `main` entry point |
+| `llvm_actor.c` | channel and thread runtime generated in IR (pthread mutexes, condition variables, `pthread_create`/`pthread_join`), `banda` functions, `paida`, `nali`, `bolo`, `suno` |
+| `toolchain.h`, `toolchain.c` | runs `clang` (or `llc` + `clang`) on the `.ll` file, and runs programs for `--run` |
+| `Makefile` | `all`, `examples`, `ir`, `test`, `clean`, `pdf` targets; finds LLVM with `llvm-config` |
 | `examples/*.rabta` | valid programs; `examples/expected/*.out` holds their expected output |
-| `tests/*.rabta` | programs that must be rejected, each with its `// EXPECT:` message |
+| `tests/aot/*.rabta` | Phase 2 code generation tests; `tests/aot/expected/*.out` holds their expected output |
+| `tests/*.rabta` | programs that must be rejected (at compile time or at run time), each with its `// EXPECT:` message |
 | `tests/run_tests.sh` | test runner used by `make test` (prints PASS/FAIL) |
 | `docs/Rabta_Compiler_Proposal.pdf` | the original project proposal |
 | `README.md`, `README.pdf` | this document |
-| `.gitignore` | ignores generated files (`lex.yy.c`, `*.tab.*`, `*.o`, `rabta`, build folders) |
+| `.gitignore` | ignores generated files (`lex.yy.c`, `*.tab.*`, `*.o`, `*.ll`, `rabtac`, `build/`) |
+
+Generated files (never committed): `rabtac`, `*.o`, `rabta.tab.c`,
+`rabta.tab.h`, `lex.yy.c`, and everything in `build/` (compiled programs and
+`.ll` files).
 
 # 8. Grammar summary
 
