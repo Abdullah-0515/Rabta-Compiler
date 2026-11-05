@@ -9,8 +9,7 @@
  *
  *  The parser (rabta.y) builds this tree. The semantic pass (semantic.c,
  *  protocol.c) annotates it (types, variable slots, resolved declarations),
- *  and the interpreter (interpreter.c) walks it. The same annotated tree is
- *  meant to be the input of the Phase 2 LLVM IR generator.
+ *  and the LLVM IR generator (llvm_gen.c and friends) translates it.
  *
  *  Child layout per node kind (fields not listed are unused):
  *

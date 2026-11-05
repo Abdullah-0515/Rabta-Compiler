@@ -8,8 +8,8 @@
  *  semantic.h - Semantic pass, part 1: symbol tables and type checking.
  *
  *  semantic_check() resolves every name, checks types, argument counts and
- *  return rules, and annotates the AST for the protocol checker and the
- *  interpreter:
+ *  return rules, and annotates the AST for the protocol checker and the LLVM
+ *  code generator:
  *    - every variable reference gets a frame slot   (Node.slot)
  *    - every function/actor gets its frame size     (Node.nslots)
  *    - calls / spawns / nali / endpoints get Node.ref to their declaration
