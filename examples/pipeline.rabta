@@ -1,0 +1,39 @@
+// pipeline.rabta - a chain of three actors, each holding two endpoints.
+//   main --> dugna (x2) --> jama (+10) --> murabba (square) --> main
+// Each stage prints before it forwards, so the output order is fixed.
+
+baatcheet Pass shuru
+    client bolega i64
+khatam
+
+banda dugna(sira inp : Pass.server, sira out : Pass.client) shuru
+    rakho x = suno inp
+    dikhao("dugna  :", x, "->", x * 2)
+    bolo out, x * 2
+khatam
+
+banda jama(sira inp : Pass.server, sira out : Pass.client) shuru
+    rakho x = suno inp
+    dikhao("jama   :", x, "->", x + 10)
+    bolo out, x + 10
+khatam
+
+banda murabba(sira inp : Pass.server, sira out : Pass.client) shuru
+    rakho x = suno inp
+    dikhao("murabba:", x, "->", x * x)
+    bolo out, x * x
+khatam
+
+kaam main() shuru
+    nali a : Pass
+    nali b : Pass
+    nali c : Pass
+    nali d : Pass
+    paida dugna(a.server, b.client)
+    paida jama(b.server, c.client)
+    paida murabba(c.server, d.client)
+    bolo a.client, 7
+    rakho result = suno d.server
+    dikhao("result :", result)
+    waapis 0
+khatam

@@ -1,0 +1,15 @@
+// fibonacci.rabta - first 20 Fibonacci numbers with a jab_tak loop
+
+kaam main() shuru
+    rakho a = 0
+    rakho b = 1
+    rakho count = 0
+    jab_tak count < 20 chal
+        dikhao("fib", count, "=", a)
+        rakho next = a + b
+        a = b
+        b = next
+        count = count + 1
+    khatam
+    waapis 0
+khatam

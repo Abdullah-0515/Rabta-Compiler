@@ -1,0 +1,45 @@
+// three_actors.rabta - three worker actors sum 1..3000 in parallel.
+// main gives each worker a range [lo, hi) and collects the partial sums.
+// Only main prints, so the output is deterministic.
+
+baatcheet Hissa shuru
+    client bolega i64       // lo
+    client bolega i64       // hi (exclusive)
+    server bolega i64       // partial sum of lo .. hi-1
+khatam
+
+banda worker(id, sira job : Hissa.server) shuru
+    rakho lo = suno job
+    rakho hi = suno job
+    rakho sum = 0
+    ghoom [k : lo -> hi] chal
+        sum = sum + k
+    khatam
+    bolo job, sum
+khatam
+
+kaam main() shuru
+    nali w1 : Hissa
+    nali w2 : Hissa
+    nali w3 : Hissa
+    paida worker(1, w1.server)
+    paida worker(2, w2.server)
+    paida worker(3, w3.server)
+
+    bolo w1.client, 1
+    bolo w1.client, 1001
+    bolo w2.client, 1001
+    bolo w2.client, 2001
+    bolo w3.client, 2001
+    bolo w3.client, 3001
+
+    rakho s1 = suno w1.client
+    rakho s2 = suno w2.client
+    rakho s3 = suno w3.client
+    dikhao("worker 1:", s1)
+    dikhao("worker 2:", s2)
+    dikhao("worker 3:", s3)
+    dikhao("total   :", s1 + s2 + s3)
+    dikhao("check   :", 3000 * 3001 / 2)
+    waapis 0
+khatam

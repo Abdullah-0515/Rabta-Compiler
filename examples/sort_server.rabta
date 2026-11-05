@@ -1,0 +1,37 @@
+// sort_server.rabta - thali messages: send a whole array to an actor,
+// receive the sorted array back. Arrays are copied, never shared.
+
+baatcheet Tartib shuru
+    client bolega thali[6]
+    server bolega thali[6]
+khatam
+
+kaam sort(thali a, n) shuru
+    ghoom [i : 1 -> n] chal
+        rakho key = a[i]
+        rakho j = i - 1
+        jab_tak j >= 0 && a[j] > key chal
+            a[j + 1] = a[j]
+            j = j - 1
+        khatam
+        a[j + 1] = key
+    khatam
+    waapis 0
+khatam
+
+banda sorter(sira s : Tartib.server) shuru
+    thali data[6] = suno s
+    bulao sort(data, 6)
+    bolo s, data
+khatam
+
+kaam main() shuru
+    thali nums[6] = [31, 4, 15, 9, 26, 5]
+    nali ch : Tartib
+    paida sorter(ch.server)
+    bolo ch.client, nums
+    thali sorted[6] = suno ch.client
+    dikhao("sent  :", nums)
+    dikhao("sorted:", sorted)
+    waapis 0
+khatam

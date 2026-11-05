@@ -1,0 +1,24 @@
+// bubble_sort.rabta - bubble sort on a bounded array (thali).
+// A thali parameter of a kaam is passed by reference, so sort() changes
+// the caller's array.
+
+kaam sort(thali a, n) shuru
+    ghoom [i : 0 -> n - 1] chal
+        ghoom [j : 0 -> n - 1 - i] chal
+            agar a[j] > a[j + 1] shuru
+                rakho tmp = a[j]
+                a[j] = a[j + 1]
+                a[j + 1] = tmp
+            khatam
+        khatam
+    khatam
+    waapis 0
+khatam
+
+kaam main() shuru
+    thali nums[8] = [42, 7, 19, -3, 88, 0, 15, 7]
+    dikhao("before:", nums)
+    bulao sort(nums, 8)
+    dikhao("after: ", nums)
+    waapis 0
+khatam

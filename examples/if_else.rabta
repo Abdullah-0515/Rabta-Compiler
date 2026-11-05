@@ -1,0 +1,42 @@
+// if_else.rabta - agar / warna agar / warna, comparison and logical operators
+
+kaam classify(n) shuru
+    agar n < 0 shuru
+        waapis -1
+    khatam warna agar n == 0 shuru
+        waapis 0
+    khatam warna shuru
+        waapis 1
+    khatam
+khatam
+
+kaam main() shuru
+    thali values[5] = [-12, 0, 7, 15, 30]
+    ghoom [i : 0 -> 5] chal
+        rakho n = values[i]
+        rakho sign = bulao classify(n)
+        agar sign == -1 shuru
+            dikhao(n, "is negative")
+        khatam warna agar sign == 0 shuru
+            dikhao(n, "is zero")
+        khatam warna shuru
+            dikhao(n, "is positive")
+        khatam
+
+        // logical operators: && || !
+        agar n % 3 == 0 && n % 5 == 0 shuru
+            dikhao("  ", n, "is divisible by 3 and 5")
+        khatam warna agar n % 3 == 0 || n % 5 == 0 shuru
+            dikhao("  ", n, "is divisible by 3 or 5")
+        khatam
+        agar !(n % 2 == 0) shuru
+            dikhao("  ", n, "is odd")
+        khatam
+    khatam
+
+    // precedence: * before +, comparison before &&
+    dikhao("2 + 3 * 4 =", 2 + 3 * 4)
+    dikhao("(2 + 3) * 4 =", (2 + 3) * 4)
+    dikhao("1 < 2 && 3 > 4 =", 1 < 2 && 3 > 4)
+    waapis 0
+khatam

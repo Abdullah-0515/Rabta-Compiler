@@ -1,0 +1,26 @@
+// hisaab.rabta - the example from the Rabta proposal.
+// A client (main) asks a server actor for the sum of 1..n.
+
+// Protocol: who speaks, in what order, with what type
+baatcheet Hisaab shuru
+    client bolega i64       // n
+    server bolega i64       // sum of 1..n
+khatam
+
+banda server(sira s : Hisaab.server) shuru
+    rakho n = suno s        // receive n
+    rakho total = 0
+    ghoom [i : 1 -> n + 1] chal
+        total = total + i
+    khatam
+    bolo s, total           // send the answer; protocol now complete
+khatam
+
+kaam main() shuru
+    nali line : Hisaab              // creates line.client and line.server
+    paida server(line.server)       // spawn the server actor
+    bolo line.client, 100           // send n
+    rakho ans = suno line.client    // receive the answer
+    dikhao(ans)                     // prints 5050
+    waapis 0
+khatam

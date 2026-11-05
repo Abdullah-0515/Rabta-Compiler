@@ -1,0 +1,16 @@
+// factorial.rabta - recursion with kaam / bulao / waapis
+
+kaam factorial(n) shuru
+    agar n <= 1 shuru
+        waapis 1
+    khatam
+    waapis n * bulao factorial(n - 1)
+khatam
+
+kaam main() shuru
+    ghoom [i : 0 -> 11] chal
+        dikhao("factorial", i, "=", bulao factorial(i))
+    khatam
+    dikhao("factorial 20 =", bulao factorial(20))
+    waapis 0
+khatam

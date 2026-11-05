@@ -1,0 +1,45 @@
+// ping_pong.rabta - two actors play ping-pong over one channel.
+// Each side prints before it sends, and waits for the other side before
+// printing again, so the output order is fixed by the protocol itself.
+
+baatcheet PingPong shuru
+    client bolega i64       // ping 1
+    server bolega i64       // pong 1
+    client bolega i64       // ping 2
+    server bolega i64       // pong 2
+    client bolega i64       // ping 3
+    server bolega i64       // pong 3
+khatam
+
+banda pinger(sira p : PingPong.client) shuru
+    dikhao("ping", 1)
+    bolo p, 1
+    rakho r = suno p
+    dikhao("ping", r + 1)
+    bolo p, r + 1
+    r = suno p
+    dikhao("ping", r + 1)
+    bolo p, r + 1
+    r = suno p
+    dikhao("pinger got the last pong:", r)
+khatam
+
+banda ponger(sira q : PingPong.server) shuru
+    rakho x = suno q
+    dikhao("    pong", x)
+    bolo q, x
+    x = suno q
+    dikhao("    pong", x)
+    bolo q, x
+    x = suno q
+    dikhao("    pong", x)
+    bolo q, x
+khatam
+
+kaam main() shuru
+    dikhao("starting ping-pong")
+    nali table : PingPong
+    paida pinger(table.client)
+    paida ponger(table.server)
+    waapis 0
+khatam
