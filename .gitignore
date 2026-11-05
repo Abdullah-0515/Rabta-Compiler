@@ -1,0 +1,63 @@
+# ============================================================================
+#  Rabta Programming Language - .gitignore
+#  Authors: Ansa Mubasher, Ahmed Yasin, Rana Muhammad Abdullah
+# ============================================================================
+# Only generated files are ignored. Sources (.l .y .c .h), the Makefile,
+# examples/, tests/, docs/, README.md and README.pdf are tracked.
+
+# ---- Flex / Bison generated sources ----
+lex.yy.c
+lex.yy.cc
+*.tab.c
+*.tab.h
+*.tab.cc
+*.tab.hh
+*.output
+location.hh
+position.hh
+stack.hh
+
+# ---- Object files and libraries ----
+*.o
+*.obj
+*.a
+*.so
+*.dylib
+*.dSYM/
+
+# ---- Executables ----
+/rabta
+/rabta_*
+*.out.tmp
+a.out
+*.exe
+
+# ---- Build folders (Phase 2: LLVM / CMake) ----
+build/
+bin/
+obj/
+out/
+cmake-build-*/
+CMakeFiles/
+CMakeCache.txt
+*.ll
+*.bc
+
+# ---- Debugging / profiling ----
+core
+core.*
+vgcore.*
+*.gcda
+*.gcno
+gmon.out
+perf.data*
+
+# ---- Editors and OS ----
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+Thumbs.db
+*:Zone.Identifier
